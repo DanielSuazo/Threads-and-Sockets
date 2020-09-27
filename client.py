@@ -6,9 +6,9 @@ from threading import Thread
 
 serverAddressPort = (argv[1], int(argv[2]))
 
-threadCount = 50
+threadCount = 25
 sleepRange = 2
-jobRange = 10
+jobRange = 1
 numberJobs = 2
 
 
