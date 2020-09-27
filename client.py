@@ -6,26 +6,28 @@ from threading import Thread
 
 serverAddressPort = (argv[1], int(argv[2]))
 
-threadCount = 70
+threadCount = 50
 sleepRange = 2
 jobRange = 2
-numberJobs = 5
+numberJobs = 2
 
 
 def device(id: int):
     global numberJobs, jobRange, sleepRange
 
+    # Create socket
     s = socket(family=AF_INET, type=SOCK_DGRAM)
-    timeSent = 0
+
     for i in range(numberJobs):
+        # Generate job time and sleep time
         jobTime = randint(1, jobRange)
         sleepTime = randint(1, sleepRange)
+
+        # Create, encode and send message
         msg = str.encode(f"{id}:{jobTime}")
         s.sendto(msg, serverAddressPort)
-        timeSent += jobTime
+
         sleep(sleepTime)
-    # DELETE
-    print(f"Thread {id} done with {timeSent} seconds sent")
 
 
 def main():
@@ -38,14 +40,16 @@ def main():
         thread[i] = Thread(target=device, args=(i,))
         thread[i].start()
 
-    # Make the original thread wait for the created threads.
-
+    # Make the original thread wait for the created threads.]
     for i in range(threadCount):
         thread[i].join()
 
+    # Create socket and send end message
     s = socket(family=AF_INET, type=SOCK_DGRAM)
     msg = str.encode("done")
     s.sendto(msg, serverAddressPort)
+
+    print("All done!")
 
 
 if __name__ == "__main__":
