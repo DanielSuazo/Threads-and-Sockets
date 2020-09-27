@@ -62,7 +62,7 @@ def producer():
             # Enter critical region (queue)
             queueLock.acquire()
 
-            #
+            # Insert
             for i in range(len(queue)):
                 if (data[1] < queue[i][1]):
                     queue.insert(i, data)
