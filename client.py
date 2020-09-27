@@ -8,7 +8,7 @@ serverAddressPort = (argv[1], int(argv[2]))
 
 threadCount = 50
 sleepRange = 2
-jobRange = 2
+jobRange = 10
 numberJobs = 2
 
 

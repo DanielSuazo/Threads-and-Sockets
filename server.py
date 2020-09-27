@@ -64,12 +64,15 @@ def producer():
 
             #
             for i in range(len(queue)):
-                if (data[1] <= queue[i][1]):
+                if (data[1] < queue[i][1]):
                     queue.insert(i, data)
                     break
             else:
                 queue.append(data)
             queueLock.release()
+            for i in queue:
+                print(i[1], end=", ")
+            print()
             # Exit critical region (queue)
 
 
@@ -78,13 +81,13 @@ def main():
 
     # Create and start threads
     produce = Thread(target=producer, args=())
-    consume = Thread(target=consumer, args=())
+    #consume = Thread(target=consumer, args=())
     produce.start()
-    consume.start()
+    # consume.start()
 
     # block main until threads finish
     produce.join()
-    consume.join()
+    # consume.join()
 
     # Print out list of clients and their respecive CPU time used
     for key in timeList:
