@@ -2,45 +2,54 @@ from socket import socket, AF_INET, SOCK_DGRAM
 from time import sleep
 from sys import argv
 from random import randint
-from threading import Thread, Lock
+from threading import Thread, Lock, Semaphore
 
-serverAddressPort = ("localhost", int(argv[1]))
+
+ip = "localhost"
 queueLock = Lock()
+emptyQueue = Semaphore()
 producerDone = False
 queue = []
 bufferSize = 1024
 timeList = {}
+serverAddressPort = (ip, int(argv[1]))
 
 
 def consumer():
-    global producerDone, queue, queueLock, timeList
+    global producerDone, queue, queueLock, timeList, emptyQueue
+
+    # Loop until producer recieves the "done" command and then until the queue is empty
     while(not producerDone or len(queue) > 0):
+
+        # Block thread if queue is empty
+        # Dont ask how it just works
+        emptyQueue.acquire()
+        if (not producerDone or len(queue) == 0):
+            emptyQueue.acquire()
+
+        # Enter critical region (queue)
+        queueLock.acquire()
+        data = queue.pop(0)
+        queueLock.release()
+        # Enter critical region (queue)
+
+        client = data[0]
+        time = data[1]
+
+        # Update timeList
         try:
-            # Enter critical region (queue)
-            queueLock.acquire()
-            data = queue.pop(0)
-            queueLock.release()
-            # Enter critical region (queue)
+            timeList[client] += time
+        except KeyError:
+            timeList[client] = time
 
-            client = data[0]
-            time = data[1]
-
-            # Update timeList
-            try:
-                timeList[client] += time
-            except KeyError:
-                timeList[client] = time
-
-            # Execute the job (sleep lmao)
-            sleep(time)
+        # Execute the job and release semaphore (sleep lmao)
+        emptyQueue.release()
+        sleep(time)
         # Catch any error with popping from the queue and release lock
-        except IndexError:
-            queueLock.release()
-            pass
 
 
 def producer():
-    global producerDone, queue, serverAddressPort, queueLock
+    global producerDone, queue, serverAddressPort, queueLock, emptyQueue
 
     # Create and bind socket
     s = socket(family=AF_INET, type=SOCK_DGRAM)
@@ -50,10 +59,12 @@ def producer():
         # Recieve message and decode to string
         bytesAddress = s.recvfrom(bufferSize)
         message = bytesAddress[0].decode("utf-8")
+        print(message)
 
         # Test if client has completed
         if (message == "done"):
             producerDone = True
+            emptyQueue.release()
         else:
             # Create data tuple
             data = (int(message.split(sep=":")[0]), int(
@@ -61,15 +72,17 @@ def producer():
 
             # Enter critical region (queue)
             queueLock.acquire()
-
-            # Insert
+            # Insert data to queue
             for i in range(len(queue)):
                 if (data[1] < queue[i][1]):
                     queue.insert(i, data)
                     break
             else:
                 queue.append(data)
+            emptyQueue.release()
             queueLock.release()
+            # Release semaphore blocking the consumption of
+
             # Exit critical region (queue)
 
 

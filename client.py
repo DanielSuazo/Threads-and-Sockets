@@ -6,15 +6,14 @@ from threading import Thread
 
 serverAddressPort = (argv[1], int(argv[2]))
 
-threadCount = 25
+threadCount = 15
 sleepRange = 2
-jobRange = 1
-numberJobs = 2
+jobRange = 10
+numberJobs = 4
 
 
 def device(id: int):
     global numberJobs, jobRange, sleepRange
-
     # Create socket
     s = socket(family=AF_INET, type=SOCK_DGRAM)
 
@@ -31,7 +30,6 @@ def device(id: int):
 
 
 def main():
-
     global threadCount, serverAddressPort
     thread = [0] * threadCount
 
