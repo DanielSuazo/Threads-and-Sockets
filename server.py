@@ -23,13 +23,18 @@ def consumer():
 
         # Block thread if queue is empty
         # Dont ask how it just works
+        # La clear if you dont understand it text me, I swear it works
         emptyQueue.acquire()
         if (not producerDone or len(queue) == 0):
             emptyQueue.acquire()
 
         # Enter critical region (queue)
         queueLock.acquire()
-        data = queue.pop(0)
+        # Just in case the "done" message is done
+        try:
+            data = queue.pop(0)
+        except:
+            pass
         queueLock.release()
         # Enter critical region (queue)
 
@@ -59,7 +64,6 @@ def producer():
         # Recieve message and decode to string
         bytesAddress = s.recvfrom(bufferSize)
         message = bytesAddress[0].decode("utf-8")
-        print(message)
 
         # Test if client has completed
         if (message == "done"):
@@ -79,10 +83,9 @@ def producer():
                     break
             else:
                 queue.append(data)
+            # Release semaphore blocking the consumer
             emptyQueue.release()
             queueLock.release()
-            # Release semaphore blocking the consumption of
-
             # Exit critical region (queue)
 
 

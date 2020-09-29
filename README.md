@@ -1,5 +1,7 @@
 Scheduled compute server simulator
 
+client.py simulates threadCount number of devices sending jobs in to a server whereas server.py accepts the messages until client sends a done message. The simulated compute server performs the jobs sent and then prints the amount of compute time each device used.
+
 Requirements:
 Python 3
 
@@ -22,3 +24,6 @@ How to use:
 3. Wait for client.py to send messages to server.py and for server.py to compute everything.
 
 If you wish to run the server on a different machine, change the global variable named "ip" from localhost, to the server's ip address and run as normal
+
+References used:
+https://pythontic.com/modules/socket/udp-client-server-example
