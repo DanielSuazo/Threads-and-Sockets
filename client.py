@@ -6,7 +6,7 @@ from threading import Thread
 
 serverAddressPort = (argv[1], int(argv[2]))
 
-threadCount = 15
+threadCount = 100
 sleepRange = 2
 jobRange = 10
 numberJobs = 4
@@ -41,11 +41,6 @@ def main():
     # Make the original thread wait for the created threads.]
     for i in range(threadCount):
         thread[i].join()
-
-    # Create socket and send end message
-    s = socket(family=AF_INET, type=SOCK_DGRAM)
-    msg = str.encode("done")
-    s.sendto(msg, serverAddressPort)
 
     print("All done!")
 

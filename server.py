@@ -6,9 +6,10 @@ from threading import Thread, Lock, Semaphore
 
 
 ip = "localhost"
+numberJobs = 400  # must be equal to threadCount * numberJobs in client.py
 queueLock = Lock()
-emptyQueue = Semaphore()
-producerDone = False
+emptyQueue = Semaphore(numberJobs)
+fullQueue = Semaphore(0)
 queue = []
 bufferSize = 1024
 timeList = {}
@@ -16,27 +17,22 @@ serverAddressPort = (ip, int(argv[1]))
 
 
 def consumer():
-    global producerDone, queue, queueLock, timeList, emptyQueue
+    global queue, queueLock, timeList, emptyQueue, fullQueue
 
     # Loop until producer recieves the "done" command and then until the queue is empty
-    while(not producerDone or len(queue) > 0):
+    for i in range(numberJobs):
 
         # Block thread if queue is empty
-        # Dont ask how it just works
-        # La clear if you dont understand it text me, I swear it works
-        emptyQueue.acquire()
-        if (not producerDone or len(queue) == 0):
-            emptyQueue.acquire()
-
+        fullQueue.acquire()
         # Enter critical region (queue)
         queueLock.acquire()
-        # Just in case the "done" message is done
-        try:
-            data = queue.pop(0)
-        except:
-            pass
+
+        data = queue.pop(0)
+
+        # Exit critical region (queue)
         queueLock.release()
-        # Enter critical region (queue)
+        # increment empty
+        emptyQueue.release()
 
         client = data[0]
         time = data[1]
@@ -47,46 +43,42 @@ def consumer():
         except KeyError:
             timeList[client] = time
 
-        # Execute the job and release semaphore (sleep lmao)
-        emptyQueue.release()
-        sleep(time)
+        # Execute the job (sleep lmao)
+        sleep(.1)
+        print(f"slept {time} seconds for client {client}")
         # Catch any error with popping from the queue and release lock
 
 
 def producer():
-    global producerDone, queue, serverAddressPort, queueLock, emptyQueue
+    global queue, serverAddressPort, queueLock, emptyQueue, fullQueue
 
     # Create and bind socket
     s = socket(family=AF_INET, type=SOCK_DGRAM)
     s.bind(serverAddressPort)
 
-    while (not producerDone):
+    for i in range(numberJobs):
         # Recieve message and decode to string
         bytesAddress = s.recvfrom(bufferSize)
         message = bytesAddress[0].decode("utf-8")
 
-        # Test if client has completed
-        if (message == "done"):
-            producerDone = True
-            emptyQueue.release()
-        else:
-            # Create data tuple
-            data = (int(message.split(sep=":")[0]), int(
-                message.split(sep=":")[1]))
+        # Create data tuple
+        data = (int(message.split(sep=":")[0]), int(
+            message.split(sep=":")[1]))
 
-            # Enter critical region (queue)
-            queueLock.acquire()
-            # Insert data to queue
-            for i in range(len(queue)):
-                if (data[1] < queue[i][1]):
-                    queue.insert(i, data)
-                    break
-            else:
-                queue.append(data)
-            # Release semaphore blocking the consumer
-            emptyQueue.release()
-            queueLock.release()
-            # Exit critical region (queue)
+        # Enter critical region (queue)
+        emptyQueue.acquire()
+        queueLock.acquire()
+        # Insert data to queue
+        for i in range(len(queue)):
+            if (data[1] < queue[i][1]):
+                queue.insert(i, data)
+                break
+        else:
+            queue.append(data)
+        # Release semaphore blocking the consumer
+        queueLock.release()
+        fullQueue.release()
+        # Exit critical region (queue)
 
 
 def main():
@@ -103,7 +95,8 @@ def main():
     consume.join()
 
     # Print out list of clients and their respecive CPU time used
-    for key in timeList:
+
+    for key in sorted(timeList):
         print(f"Client #{key} took {timeList[key]} seconds of CPU time")
 
 
